@@ -1,0 +1,75 @@
+{
+    "text": "New PR ready for review in {{repo}} - {{body.pull_request.title}}",
+	"blocks": [
+		{
+			"type": "section",
+			"text": {
+				"type": "mrkdwn",
+				"text": "Ready for review:"
+			}
+		},
+		{
+			"type": "divider"
+		},
+		{
+			"type": "context",
+			"elements": [
+				{
+					"type": "mrkdwn",
+					"text": ":pr-green:"
+				},
+				{
+					"type": "mrkdwn",
+					"text": "{{repo}}"
+				}
+			]
+		},
+		{
+			"type": "section",
+			"text": {
+				"type": "mrkdwn",
+				"text": "*{{body.pull_request.title}}*"
+			}
+		},
+		{
+			"type": "section",
+			"text": {
+				"type": "mrkdwn",
+				"text": "<{{body.pull_request.html_url}}>"
+			}
+		},
+		{
+			"type": "context",
+			"elements": [
+				{
+					"type": "image",
+					"image_url": "{{body.pull_request.user.avatar_url}}",
+					"alt_text": "{{body.pull_request.user.login}}"
+				},
+				{
+					"type": "mrkdwn",
+					"text": "Opened by <@{{slackUser.id}}> (*{{body.pull_request.user.login}}*)"
+				}
+			]
+		},
+		{
+			"type": "divider"
+		},
+		{
+			"type": "actions",
+			"elements": [
+				{
+					"type": "button",
+					"text": {
+						"type": "plain_text",
+						"text": "Start a review",
+						"emoji": true
+					},
+					"value": "{{body.pull_request.html_url}}",
+					"action_id": "review/start",
+					"url": "{{body.pull_request.html_url}}/files"
+				}
+			]
+		}
+	]
+}

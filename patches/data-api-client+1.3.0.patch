@@ -1,0 +1,62 @@
+diff --git a/node_modules/data-api-client/index.js b/node_modules/data-api-client/index.js
+index a4b7cdd..638e111 100644
+--- a/node_modules/data-api-client/index.js
++++ b/node_modules/data-api-client/index.js
+@@ -31,6 +31,8 @@ const supportedTypes = [
+   'structValue'
+ ]
+ 
++const UUID_REGEX = /^(?:[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}|00000000-0000-0000-0000-000000000000)$/i;
++
+ /********************************************************************/
+ /**  PRIVATE METHODS                                               **/
+ /********************************************************************/
+@@ -218,13 +220,29 @@ const getType = (val) =>
+     // TODO: there is a 'structValue' now for postgres
+     typeof val === 'object' && Object.keys(val).length === 1 && supportedTypes.includes(Object.keys(val)[0])
+     ? null
++    : typeof val === 'object'
++    ? 'stringValue' // try to encode as JSON later
+     : undefined
+ 
+ // Hint to specify the underlying object type for data type mapping
+-const getTypeHint = (val) => (isDate(val) ? 'TIMESTAMP' : undefined)
++const getTypeHint = val => {
++  if (isDate(val))
++    return 'TIMESTAMP'
++  if (isUUID(val))
++    return 'UUID'
++  if (isObject(val))
++    return 'JSON'
++  return undefined
++}
+ 
+ const isDate = (val) => val instanceof Date
+ 
++const isUUID = val =>
++  typeof val === 'string' && UUID_REGEX.test(val)
++
++const isObject = val =>
++  typeof val === 'object'
++
+ // Creates a standard Data API parameter using the supplied inputs
+ const formatType = (name, value, type, typeHint, formatOptions) => {
+   return Object.assign(
+@@ -238,6 +256,8 @@ const formatType = (name, value, type, typeHint, formatOptions) => {
+                 ? true
+                 : isDate(value)
+                 ? formatToTimeStamp(value, formatOptions && formatOptions.treatAsLocalDate)
++                : typeHint == 'JSON'
++                ? JSON.stringify(value)
+                 : value
+           }
+         }
+@@ -360,7 +380,7 @@ const formatRecordValue = (value, typeName, formatOptions) => {
+       value,
+       (formatOptions && formatOptions.treatAsLocalDate) || typeName === 'TIMESTAMP WITH TIME ZONE'
+     )
+-  } else if (typeName === 'JSON') {
++  } else if (['JSON', 'JSONB'].includes(typeName.toUpperCase())) {
+     return JSON.parse(value)
+   } else {
+     return value

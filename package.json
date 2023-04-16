@@ -1,0 +1,45 @@
+{
+  "name": "udexp",
+  "version": "1.0.0",
+  "description": "Ultimate Developer Experience",
+  "main": "handler.js",
+  "scripts": {
+    "deploy": "serverless deploy",
+    "logs": "serverless logs -f githubWebhookListener -t",
+    "test": "serverless-bundle test",
+    "postinstall": "patch-package"
+  },
+  "license": "MIT",
+  "devDependencies": {
+    "@types/aws-lambda": "^8.10.83",
+    "@types/jest": "^27.0.3",
+    "data-api-client": "^1.2.0",
+    "data-api-local-serverless": "^1.0.0-alpha.2",
+    "data-api-migrations-serverless": "^1.0.0-alpha.3",
+    "patch-package": "^6.4.7",
+    "postinstall-postinstall": "^2.1.0",
+    "serverless": "^3.23.0",
+    "serverless-better-credentials": "^1.1.3",
+    "serverless-bundle": "^5.2.0",
+    "serverless-iam-roles-per-function": "^3.2.0",
+    "serverless-offline": "^8.4.0",
+    "string-template-parser": "^1.2.6"
+  },
+  "dependencies": {
+    "@aws-sdk/client-lambda": "^3.36.0",
+    "@aws-sdk/client-rds-data": "^3.36.0",
+    "@aws-sdk/client-secrets-manager": "^3.36.0",
+    "@octokit/graphql": "^5.0.5",
+    "@octokit/rest": "^18.12.0",
+    "@slack/bolt": "^3.7.0",
+    "debug": "^4.3.3",
+    "github-label-sync": "^2.2.0",
+    "js-yaml": "^3.14.1",
+    "json-templates": "^4.1.0",
+    "node-fetch": "^3.0.0",
+    "uuid": "^8.3.2"
+  },
+  "resolutions": {
+    "data-api-local-serverless/**/pg": "^8.0.0"
+  }
+}

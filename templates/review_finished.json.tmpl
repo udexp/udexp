@@ -1,0 +1,48 @@
+{
+    "text": "Review by <@{{slackUser.id}}> is {{review.state}} - {{pull_request.title}}",
+	"blocks": [
+		{
+			"type": "section",
+			"text": {
+				"type": "mrkdwn",
+				"text": "Hi, <@{{slackUser.id}}> finished reviewing your PR: {{review.icon}} {{review.state}}"
+			}
+		},
+        {
+            "type": "context",
+            "elements": [
+                {
+                    "type": "mrkdwn",
+                    "text": ":pr-green:"
+                },
+                {
+                    "type": "mrkdwn",
+                    "text": "{{repository.owner.login}}/{{repository.name}}"
+                }
+            ]
+        },
+        {
+            "type": "section",
+            "text": {
+                "type": "mrkdwn",
+                "text": "*{{pull_request.title}}*"
+            }
+        },
+		{
+			"type": "actions",
+			"elements": [
+				{
+					"type": "button",
+					"text": {
+						"type": "plain_text",
+						"text": "Click here",
+						"emoji": true
+					},
+					"value": "#",
+					"url": "{{review.html_url}}",
+					"action_id": "review/finished"
+				}
+			]
+		}
+	]
+}

@@ -1,0 +1,26 @@
+diff --git a/node_modules/serverless/bin/serverless.js b/node_modules/serverless/bin/serverless.js
+index 09f1ec7..4269de2 100755
+--- a/node_modules/serverless/bin/serverless.js
++++ b/node_modules/serverless/bin/serverless.js
+@@ -16,6 +16,16 @@ const nodeVersionMinor = Number(process.version.split('.')[1]);
+ const minimumSupportedVersionMajor = 12;
+ const minimumSupportedVersionMinor = 13;
+ 
++let child;
++if (process.env.AWS_SDK_LOAD_CONFIG != '1') {
++  const { spawn } = require('child_process');
++  const args = [];
++  args.push(...process.execArgv, ...process.argv.slice(1));
++  child = spawn(process.argv[0], args, { stdio: 'inherit', env: { ...process.env, AWS_SDK_LOAD_CONFIG: '1' } });
++  child.on('exit', (code) => {
++    process.exit(code)
++  })
++} else {
+ if (
+   nodeVersionMajor < minimumSupportedVersionMajor ||
+   (nodeVersionMajor === minimumSupportedVersionMajor &&
+@@ -129,3 +139,4 @@ require('../lib/cli/triage')().then((cliName) => {
+       throw new Error(`Unrecognized CLI name "${cliName}"`);
+   }
+ });
++}

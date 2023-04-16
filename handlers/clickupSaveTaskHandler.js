@@ -1,0 +1,34 @@
+import fetch from 'node-fetch'
+import { DB } from '../lib/storage'
+import { getSecret } from '../lib/secret'
+import { log } from '../lib/logging'
+
+const dbConn = new DB({
+  database: process.env.DATA_API_DATABASE_NAME,
+  resourceArn: process.env.DATA_API_RESOURCE_ARN,
+  secretArn: process.env.DATA_API_SECRET_ARN,
+})
+
+const CLICKUP_ORG_ID = process.env.CLICKUP_ORG_ID
+const TASK_URL = `https://app.clickup.com/t/${CLICKUP_ORG_ID}/`
+
+export async function clickupSaveTaskHandler (event, context) {
+  log(event)
+  const data = event
+  try {
+    const key = await getSecret(process.env.CLICKUP_API_KEY)
+    const res = await fetch(`https://api.clickup.com/api/v2/task/${data.task_id}`, {
+      headers: {
+        Authorization: key,
+      }
+    })
+    const task_data = await res.json()
+    data.body.task_data = task_data
+    data.custom_id = task_data.custom_id
+    data.name = task_data.name
+    await dbConn.updateTaskList(data, TASK_URL)
+    await dbConn.insertTaskEvent(data)
+  } catch (e) {
+    console.log(e)
+  }
+}

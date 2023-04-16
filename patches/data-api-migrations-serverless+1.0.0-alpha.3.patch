@@ -1,0 +1,42 @@
+diff --git a/node_modules/data-api-migrations-serverless/lib/index.js b/node_modules/data-api-migrations-serverless/lib/index.js
+index deacfa6..f80cce6 100644
+--- a/node_modules/data-api-migrations-serverless/lib/index.js
++++ b/node_modules/data-api-migrations-serverless/lib/index.js
+@@ -18,7 +18,8 @@ class DataAPIMigrationsServerless {
+             stage: {
+                 usage: 'The stage e.g. (local, dev, staging, prod, etc.)',
+                 required: false,
+-                default: 'local'
++                default: 'local',
++                type: 'string'
+             }
+         };
+         this.stage = options.stage || 'local';
+@@ -35,7 +36,8 @@ class DataAPIMigrationsServerless {
+                             name: {
+                                 usage: 'Name of the migration e.g. sls migration create --name createUsersTable',
+                                 required: true,
+-                                shortcut: 'n'
++                                shortcut: 'n',
++                                type: 'string'
+                             }
+                         }
+                     },
+@@ -96,14 +98,15 @@ class DataAPIMigrationsServerless {
+         if (baseConfig === undefined) {
+             throw new Error('"custom"."DataAPIMigrations" is missing from serverless.yml');
+         }
+-        const { migrationsFolder = './migrations', typescript = true, [this.stage]: dataAPI } = baseConfig;
++        const { migrationsFolder = './migrations', typescript = true, [this.stage]: dataAPI, tsConfig } = baseConfig;
+         if (dataAPI === undefined) {
+             throw new Error(`"custom"."DataAPIMigrations"."${this.stage}" is missing from serverless.yml`);
+         }
+         return {
+             migrationsFolder,
+             typescript,
+-            dataAPI
++            dataAPI,
++            tsConfig,
+         };
+     }
+     log(message) {

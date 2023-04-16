@@ -1,0 +1,183 @@
+Resources:
+  SlackIntegrationQueue:
+    Type: AWS::SQS::Queue
+    Properties:
+      QueueName: "${self:service}-slack-${sls:stage}"
+      VisibilityTimeout: 120
+  GithubIntegrationQueue:
+    Type: AWS::SQS::Queue
+    Properties:
+      QueueName: "${self:service}-github-${sls:stage}"
+      VisibilityTimeout: 120
+  ClickupIntegrationQueue:
+    Type: AWS::SQS::Queue
+    Properties:
+      QueueName: "${self:service}-clickup-${sls:stage}"
+      VisibilityTimeout: 120
+  UdexpIntegrationApi:
+    Type: AWS::ApiGatewayV2::Api
+    Properties:
+      ProtocolType: HTTP
+      Name: "${self:service}-api-${sls:stage}"
+  UdexpIntegrationApiStage:
+    Type: AWS::ApiGatewayV2::Stage
+    Properties:
+      ApiId: !Ref UdexpIntegrationApi
+      StageName: "$default"
+      AutoDeploy: true
+  UdexpIntegrationSlack:
+    Type: AWS::ApiGatewayV2::Integration
+    Properties:
+      ApiId: !Ref UdexpIntegrationApi
+      Description: Github webhook to SQS proxy
+      IntegrationSubtype: SQS-SendMessage
+      IntegrationType: AWS_PROXY
+      ConnectionType: INTERNET
+      PayloadFormatVersion: "1.0"
+      CredentialsArn: !GetAtt SlackIntegrationApiRole.Arn
+      RequestParameters:
+        QueueUrl: !Ref SlackIntegrationQueue
+        MessageBody: $request.body
+  UdexpIntegrationSlackRoute:
+    Type: AWS::ApiGatewayV2::Route
+    Properties:
+      ApiId: !Ref UdexpIntegrationApi
+      RouteKey: POST /${self:custom.udexp.slack.route}
+      Target: !Sub integrations/${UdexpIntegrationSlack}
+  UdexpIntegrationGithub:
+    Type: AWS::ApiGatewayV2::Integration
+    Properties:
+      ApiId: !Ref UdexpIntegrationApi
+      Description: Github webhook to SQS proxy
+      IntegrationSubtype: SQS-SendMessage
+      IntegrationType: AWS_PROXY
+      ConnectionType: INTERNET
+      PayloadFormatVersion: "1.0"
+      CredentialsArn: !GetAtt GithubIntegrationApiRole.Arn
+      RequestParameters:
+        QueueUrl: !Ref GithubIntegrationQueue
+        MessageBody: $request.body
+        MessageAttributes: >-
+          {
+            "ContentType": {
+              "DataType": "String",
+              "StringValue": "${request.header.content-type}"
+            },
+            "XHubSignature": {
+              "DataType": "String",
+              "StringValue": "${request.header.x-hub-signature}"
+            },
+            "XGithubEvent": {
+              "DataType": "String",
+              "StringValue": "${request.header.x-github-event}"
+            },
+            "XGithubDelivery": {
+              "DataType": "String",
+              "StringValue": "${request.header.x-github-delivery}"
+            }
+          }
+  UdexpIntegrationGithubRoute:
+    Type: AWS::ApiGatewayV2::Route
+    Properties:
+      ApiId: !Ref UdexpIntegrationApi
+      RouteKey: POST /${self:custom.udexp.github.route}
+      Target: !Sub integrations/${UdexpIntegrationGithub}
+  UdexpIntegrationClickup:
+    Type: AWS::ApiGatewayV2::Integration
+    Properties:
+      ApiId: !Ref UdexpIntegrationApi
+      Description: Github webhook to SQS proxy
+      IntegrationSubtype: SQS-SendMessage
+      IntegrationType: AWS_PROXY
+      ConnectionType: INTERNET
+      PayloadFormatVersion: "1.0"
+      CredentialsArn: !GetAtt ClickupIntegrationApiRole.Arn
+      RequestParameters:
+        QueueUrl: !Ref ClickupIntegrationQueue
+        MessageBody: $request.body
+        MessageAttributes: >-
+          {
+            "ContentType": {
+              "DataType": "String",
+              "StringValue": "${request.header.content-type}"
+            },
+            "XSignature": {
+              "DataType": "String",
+              "StringValue": "${request.header.x-signature}"
+            }
+          }
+  UdexpIntegrationClickupRoute:
+    Type: AWS::ApiGatewayV2::Route
+    Properties:
+      ApiId: !Ref UdexpIntegrationApi
+      RouteKey: POST /${self:custom.udexp.clickup.route}
+      Target: !Sub integrations/${UdexpIntegrationClickup}
+  SlackIntegrationApiRole:
+    Type: 'AWS::IAM::Role'
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - apigateway.amazonaws.com
+            Action:
+              - 'sts:AssumeRole'
+      Policies:
+        - PolicyName: "${self:service}-slack-${sls:stage}"
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - 'sqs:SendMessage'
+                  - 'sqs:GetQueueUrl'
+                  - 'sqs:SendMessageBatch'
+                Resource: !GetAtt SlackIntegrationQueue.Arn
+  GithubIntegrationApiRole:
+    Type: 'AWS::IAM::Role'
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - apigateway.amazonaws.com
+            Action:
+              - 'sts:AssumeRole'
+      Policies:
+        - PolicyName: "${self:service}-github-${sls:stage}"
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - 'sqs:SendMessage'
+                  - 'sqs:GetQueueUrl'
+                  - 'sqs:SendMessageBatch'
+                Resource: !GetAtt GithubIntegrationQueue.Arn
+  ClickupIntegrationApiRole:
+    Type: 'AWS::IAM::Role'
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - apigateway.amazonaws.com
+            Action:
+              - 'sts:AssumeRole'
+      Policies:
+        - PolicyName: "${self:service}-github-${sls:stage}"
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - 'sqs:SendMessage'
+                  - 'sqs:GetQueueUrl'
+                  - 'sqs:SendMessageBatch'
+                Resource: !GetAtt ClickupIntegrationQueue.Arn

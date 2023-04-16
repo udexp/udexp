@@ -1,0 +1,252 @@
+service: udexp
+
+plugins:
+  - serverless-better-credentials
+  - serverless-iam-roles-per-function
+  - serverless-bundle
+  - data-api-migrations-serverless
+  - data-api-local-serverless
+  - serverless-offline
+
+provider:
+  name: aws
+  runtime: nodejs16.x
+  region: us-east-2
+  environment:
+    NAME_PREFIX: ${self:service}-${sls:stage}-
+    GITHUB_WEBHOOK_SECRET: ${self:custom.udexp.github.webhookSecret}
+    GITHUB_TOKEN_SECRET: ${self:custom.udexp.github.tokenSecret}
+    DATA_API_SECRET_ARN: !Ref DBSecretTargetAttachment
+    DATA_API_RESOURCE_ARN: !Sub arn:aws:rds:${AWS::Region}:${AWS::AccountId}:cluster:${DBCluster}
+    DATA_API_DATABASE_NAME: ${self:custom.udexp.database, 'udexp'}
+    SLACK_SIGNING_SECRET: ${self:custom.udexp.slack.signingSecret}
+    SLACK_BOT_TOKEN: ${self:custom.udexp.slack.tokenSecret}
+    SLACK_PR_CHANNEL: ${self:custom.udexp.slack.reviewChannel}
+    CLICKUP_ORG_ID: ${self:custom.udexp.clickup.orgId, '0'}
+    CLICKUP_API_KEY: ${self:custom.udexp.clickup.apiKeySecret, ''}
+    CLICKUP_WEBHOOK_SECRET: ${self:custom.udexp.clickup.webhookSecret, ''}
+    STALE_PR_START: ${self:custom.udexp.stalePR.start, ''}
+    STALE_PR_HISTORY: ${self:custom.udexp.stalePR.history, ''}
+    STALE_PR_SCHEDULE: ${self:custom.udexp.stalePR.schedule, ''}
+    REPO_SYNC_SETTINGS: ${file(./config/repoSync-config.js)}
+
+package:
+  individually: true
+
+functions:
+  githubWebhookListener:
+    handler: handlers/githubWebhookListener.githubWebhookListener
+    timeout: 90
+    maximumRetryAttempts: 0
+    events:
+      - sqs:
+          arn: !GetAtt GithubIntegrationQueue.Arn
+    iamRoleStatements:
+      - Effect: "Allow"
+        Action:
+          - "secretsmanager:GetSecretValue"
+        Resource: "${self:provider.environment.DATA_API_SECRET_ARN}"
+      - Effect: "Allow"
+        Action:
+          - "secretsmanager:GetSecretValue"
+        Resource: "${self:provider.environment.GITHUB_WEBHOOK_SECRET}"
+      - Effect: Allow
+        Action:
+          - lambda:InvokeFunction
+        Resource: "*"
+      - Effect: "Allow"
+        Action:
+          - "rds-data:BatchExecuteStatement"
+          - "rds-data:BeginTransaction"
+          - "rds-data:CommitTransaction"
+          - "rds-data:ExecuteStatement"
+          - "rds-data:RollbackTransaction"
+        Resource: "${self:provider.environment.DATA_API_RESOURCE_ARN}"
+  githubLabelHandler:
+    handler: handlers/githubLabelHandler.githubLabelHandler
+    timeout: 90
+    iamRoleStatements:
+      - Effect: "Allow"
+        Action:
+          - "secretsmanager:GetSecretValue"
+        Resource: "${self:provider.environment.SLACK_SIGNING_SECRET}"
+      - Effect: "Allow"
+        Action:
+          - "secretsmanager:GetSecretValue"
+        Resource: "${self:provider.environment.SLACK_BOT_TOKEN}"
+  githubPRHandler:
+    handler: handlers/githubPRHandler.githubPRHandler
+    timeout: 90
+    maximumRetryAttempts: 0
+    iamRoleStatements:
+      - Effect: "Allow"
+        Action:
+          - "secretsmanager:GetSecretValue"
+        Resource: "${self:provider.environment.GITHUB_TOKEN_SECRET}"
+  githubReviewHandler:
+    handler: handlers/githubReviewHandler.githubReviewHandler
+    timeout: 90
+    maximumRetryAttempts: 0
+    iamRoleStatements:
+      - Effect: "Allow"
+        Action:
+          - "secretsmanager:GetSecretValue"
+        Resource: "${self:provider.environment.SLACK_SIGNING_SECRET}"
+      - Effect: "Allow"
+        Action:
+          - "secretsmanager:GetSecretValue"
+        Resource: "${self:provider.environment.SLACK_BOT_TOKEN}"
+  slackInteractionListener:
+    handler: handlers/slackInteractionListener.slackInteractionListener
+    timeout: 90
+    events:
+      - sqs:
+          arn: !GetAtt SlackIntegrationQueue.Arn
+    iamRoleStatements:
+      - Effect: "Allow"
+        Action:
+          - "secretsmanager:GetSecretValue"
+        Resource: "${self:provider.environment.SLACK_SIGNING_SECRET}"
+      - Effect: "Allow"
+        Action:
+          - "secretsmanager:GetSecretValue"
+        Resource: "${self:provider.environment.SLACK_BOT_TOKEN}"
+  githubMergeBot:
+    handler: handlers/githubMergeBot.githubMergeBot
+    maximumRetryAttempts: 0
+    timeout: 90
+    iamRoleStatements:
+      - Effect: "Allow"
+        Action:
+          - "secretsmanager:GetSecretValue"
+        Resource: "${self:provider.environment.GITHUB_TOKEN_SECRET}"
+    environment:
+      DEBUG: "*"
+  clickupWebhookListener:
+    handler: handlers/clickupWebhookListener.clickupWebhookListener
+    timeout: 90
+    events: ${file(./config/clickup-events-config.js)}
+    iamRoleStatements:
+      - Effect: "Allow"
+        Action:
+          - "secretsmanager:GetSecretValue"
+        Resource: "${self:provider.environment.CLICKUP_WEBHOOK_SECRET}"
+      - Effect: Allow
+        Action:
+          - lambda:InvokeFunction
+        Resource: "*"
+  clickupSaveTaskHandler:
+    handler: handlers/clickupSaveTaskHandler.clickupSaveTaskHandler
+    timeout: 90
+    iamRoleStatements:
+      - Effect: "Allow"
+        Action:
+          - "secretsmanager:GetSecretValue"
+        Resource: "${self:provider.environment.DATA_API_SECRET_ARN}"
+      - Effect: "Allow"
+        Action:
+          - "secretsmanager:GetSecretValue"
+        Resource: "${self:provider.environment.CLICKUP_API_KEY}"
+      - Effect: Allow
+        Action:
+          - lambda:InvokeFunction
+        Resource: "*"
+      - Effect: "Allow"
+        Action:
+          - "rds-data:BatchExecuteStatement"
+          - "rds-data:BeginTransaction"
+          - "rds-data:CommitTransaction"
+          - "rds-data:ExecuteStatement"
+          - "rds-data:RollbackTransaction"
+        Resource: "${self:provider.environment.DATA_API_RESOURCE_ARN}"
+  githubLinkClickup:
+    handler: handlers/githubLinkClickup.githubLinkClickup
+    timeout: 90
+    iamRoleStatements:
+      - Effect: "Allow"
+        Action:
+          - "secretsmanager:GetSecretValue"
+        Resource: "${self:provider.environment.GITHUB_TOKEN_SECRET}"
+      - Effect: "Allow"
+        Action:
+          - "secretsmanager:GetSecretValue"
+        Resource: "${self:provider.environment.DATA_API_SECRET_ARN}"
+      - Effect: "Allow"
+        Action:
+          - "rds-data:BatchExecuteStatement"
+          - "rds-data:BeginTransaction"
+          - "rds-data:CommitTransaction"
+          - "rds-data:ExecuteStatement"
+          - "rds-data:RollbackTransaction"
+        Resource: "${self:provider.environment.DATA_API_RESOURCE_ARN}"
+  githubRepoSettingsSync:
+    handler: handlers/githubRepoSettingsSync.githubRepoSettingsSync
+    timeout: 90
+    maximumRetryAttempts: 0
+    iamRoleStatements:
+      - Effect: "Allow"
+        Action:
+          - "secretsmanager:GetSecretValue"
+        Resource: "${self:provider.environment.GITHUB_TOKEN_SECRET}"
+  stalePRHandler:
+    handler: handlers/stalePRHandler.stalePRHandler
+    timeout: 120
+    maximumRetryAttempts: 0
+    events: ${file(./config/stalePR-config.js)}
+    iamRoleStatements:
+      - Effect: "Allow"
+        Action:
+          - "secretsmanager:GetSecretValue"
+        Resource: "${self:provider.environment.SLACK_SIGNING_SECRET}"
+      - Effect: "Allow"
+        Action:
+          - "secretsmanager:GetSecretValue"
+        Resource: "${self:provider.environment.SLACK_BOT_TOKEN}"
+      - Effect: "Allow"
+        Action:
+          - "secretsmanager:GetSecretValue"
+        Resource: "${self:provider.environment.DATA_API_SECRET_ARN}"
+      - Effect: "Allow"
+        Action:
+          - "rds-data:BatchExecuteStatement"
+          - "rds-data:BeginTransaction"
+          - "rds-data:CommitTransaction"
+          - "rds-data:ExecuteStatement"
+          - "rds-data:RollbackTransaction"
+        Resource: "${self:provider.environment.DATA_API_RESOURCE_ARN}"
+
+custom:
+  bundle:
+    disableForkTsChecker: true
+    copyFiles:
+      - from: 'templates/*'
+        to: './'
+  DataAPILocal:
+    server:
+      port: 8090
+      hostname: localhost
+    database:
+      engine: postgresql
+      connectionString: postgresql://master:password@localhost:25432/github
+  DataAPIMigrations:
+    destFolder: ./migrations
+    typescript: true
+    tsConfig: 'tsconfig.migrations.json'
+    local:
+      region: ${self:provider.region}
+      endpoint: http://localhost:8090
+      maxRetries: 0
+      secretArn: ${self:provider.environment.DATA_API_SECRET_ARN}
+      resourceArn: ${self:provider.environment.DATA_API_RESOURCE_ARN}
+      database: ${self:provider.environment.DATA_API_DATABASE_NAME}
+    dev:
+      region: ${self:provider.region}
+      secretArn: ${self:provider.environment.DATA_API_SECRET_ARN}
+      resourceArn: ${self:provider.environment.DATA_API_RESOURCE_ARN}
+      database: ${self:provider.environment.DATA_API_DATABASE_NAME}
+  udexp: ${file(udexp.yaml)}
+
+resources:
+  - ${file(./resources/api.yaml)}
+  - ${file(./resources/db.yaml)}
+

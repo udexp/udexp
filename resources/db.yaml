@@ -1,0 +1,44 @@
+Resources:
+  DBSecret:
+    Type: AWS::SecretsManager::Secret
+    Properties:
+      Name: "${self:service}-${sls:stage}-db"
+      GenerateSecretString:
+        SecretStringTemplate: !Sub '{"username": "master"}'
+        GenerateStringKey: "password"
+        PasswordLength: 30
+        ExcludeCharacters: '"@/\'
+  DBSecretTargetAttachment:
+    Type: AWS::SecretsManager::SecretTargetAttachment
+    Properties:
+      TargetId: !Ref DBCluster
+      SecretId: !Ref DBSecret
+      TargetType: AWS::RDS::DBCluster
+  DBClusterParameterGroup:
+    Type: AWS::RDS::DBClusterParameterGroup
+    Properties:
+      Description: !Ref 'AWS::StackName'
+      Family: 'aurora-postgresql10'
+      Parameters:
+        client_encoding: 'UTF8'
+  DBCluster:
+    DeletionPolicy: Snapshot
+    UpdateReplacePolicy: Snapshot
+    Type: AWS::RDS::DBCluster
+    Properties:
+      BackupRetentionPeriod: 30
+      DatabaseName: ${self:custom.udexp.database, 'udexp'}
+      DBClusterParameterGroupName: !Ref DBClusterParameterGroup
+      EnableHttpEndpoint: 'true'
+      Engine: aurora-postgresql
+      EngineMode: serverless
+      EngineVersion: '10.21'
+      MasterUsername: master
+      MasterUserPassword: !Join ['', ['{{resolve:secretsmanager:', !Ref DBSecret, ':SecretString:password}}']]
+      ScalingConfiguration:
+        AutoPause: 'true'
+        MaxCapacity: 16
+        MinCapacity: 2
+        SecondsUntilAutoPause: 300
+      SnapshotIdentifier: !Ref 'AWS::NoValue'
+      StorageEncrypted: true

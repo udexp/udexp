@@ -1,0 +1,66 @@
+diff --git a/node_modules/data-api-migrations/lib/Compiler.js b/node_modules/data-api-migrations/lib/Compiler.js
+index e8cb341..2b4ed24 100644
+--- a/node_modules/data-api-migrations/lib/Compiler.js
++++ b/node_modules/data-api-migrations/lib/Compiler.js
+@@ -1,11 +1,12 @@
+ "use strict";
+ Object.defineProperty(exports, "__esModule", { value: true });
+ class Compiler {
+-    constructor({ cwd, migrationsPath, buildPath, logger }) {
++    constructor({ cwd, migrationsPath, buildPath, logger, tsConfig }) {
+         this.cwd = cwd;
+         this.migrationsPath = migrationsPath;
+         this.buildPath = buildPath;
+         this.logger = logger;
++        this.tsConfig = tsConfig;
+     }
+ }
+ exports.Compiler = Compiler;
+diff --git a/node_modules/data-api-migrations/lib/DataAPIMigrations.js b/node_modules/data-api-migrations/lib/DataAPIMigrations.js
+index 7155088..d464ea2 100644
+--- a/node_modules/data-api-migrations/lib/DataAPIMigrations.js
++++ b/node_modules/data-api-migrations/lib/DataAPIMigrations.js
+@@ -30,7 +30,7 @@ const Migration_1 = require("./Migration");
+ const TypeScriptCompiler_1 = require("./TypeScriptCompiler");
+ const ID_FORMAT = 'yyyyMMddHHmmss';
+ class DataAPIMigrations {
+-    constructor({ cwd, migrationsFolder, typescript, logger, compiler, isLocal, dataAPI }) {
++    constructor({ cwd, migrationsFolder, typescript, logger, compiler, isLocal, dataAPI, tsConfig }) {
+         this.logger = logger;
+         this.cwd = cwd = cwd || process.cwd();
+         this.typescript = typescript === undefined ? true : typescript;
+@@ -39,6 +39,7 @@ class DataAPIMigrations {
+         this.migrationsPath = path.join(this.cwd, migrationsFolder || 'migrations');
+         this.buildPath = path.join(this.cwd, '.migrations_build');
+         this.dataAPI = new AuroraDataAPI(dataAPI);
++        this.tsConfig = tsConfig;
+     }
+     generateMigration(name) {
+         return __awaiter(this, void 0, void 0, function* () {
+@@ -97,7 +98,8 @@ class DataAPIMigrations {
+                 cwd: this.cwd,
+                 migrationsPath: this.migrationsPath,
+                 buildPath: this.buildPath,
+-                logger: this.log.bind(this)
++                logger: this.log.bind(this),
++                tsConfig: this.tsConfig,
+             });
+             const appliedMigrationIds = yield this.getAppliedMigrationIds();
+             const files = yield compiler.compile();
+diff --git a/node_modules/data-api-migrations/lib/TypeScriptCompiler.js b/node_modules/data-api-migrations/lib/TypeScriptCompiler.js
+index fa25526..aae731d 100644
+--- a/node_modules/data-api-migrations/lib/TypeScriptCompiler.js
++++ b/node_modules/data-api-migrations/lib/TypeScriptCompiler.js
+@@ -34,9 +34,9 @@ class TypeScriptCompiler extends Compiler_1.Compiler {
+     }
+     getTypescriptCompilerOptions() {
+         return __awaiter(this, void 0, void 0, function* () {
+-            const configFilePath = path.join(this.cwd, 'tsconfig.json');
+-            if (fs.pathExists(configFilePath)) {
+-                this.logger('Using local tsconfig.json');
++            let configFilePath = path.join(this.cwd, this.tsConfig ? this.tsConfig : 'tsconfig.json');
++            if (fs.existsSync(configFilePath)) {
++                this.logger('Using local ' + configFilePath);
+                 const configFileText = (yield fs.readFile(configFilePath)).toString();
+                 const result = ts.parseConfigFileTextToJson(configFilePath, configFileText);
+                 if (result.error) {
