@@ -6,8 +6,7 @@ import { log } from '../lib/logging'
 const readyForReviewTemplate = new JsonTemplate('./templates/new_pr.json.tmpl')
 
 const slackBot = new SlackBot({
-  signingSecret: process.env.SLACK_SIGNING_SECRET,
-  token: process.env.SLACK_BOT_TOKEN,
+  secret: process.env.UDEXP_SECRET,
 })
 
 const reviewChannel = process.env.SLACK_PR_CHANNEL

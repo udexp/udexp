@@ -14,17 +14,14 @@ provider:
   region: us-east-2
   environment:
     NAME_PREFIX: ${self:service}-${sls:stage}-
-    GITHUB_WEBHOOK_SECRET: ${self:custom.udexp.github.webhookSecret}
-    GITHUB_TOKEN_SECRET: ${self:custom.udexp.github.tokenSecret}
+    UDEXP_SECRET: ${self:custom.udexp.secret}
+    GITHUB_REVIEW_FLOW: ${self:custom.udexp.github.reviewFlow, 'draft'}
     DATA_API_SECRET_ARN: !Ref DBSecretTargetAttachment
     DATA_API_RESOURCE_ARN: !Sub arn:aws:rds:${AWS::Region}:${AWS::AccountId}:cluster:${DBCluster}
     DATA_API_DATABASE_NAME: ${self:custom.udexp.database, 'udexp'}
-    SLACK_SIGNING_SECRET: ${self:custom.udexp.slack.signingSecret}
-    SLACK_BOT_TOKEN: ${self:custom.udexp.slack.tokenSecret}
     SLACK_PR_CHANNEL: ${self:custom.udexp.slack.reviewChannel}
+    CLICKUP_ENABLED: ${self:custom.udexp.clickup.enabled, 'false'}
     CLICKUP_ORG_ID: ${self:custom.udexp.clickup.orgId, '0'}
-    CLICKUP_API_KEY: ${self:custom.udexp.clickup.apiKeySecret, ''}
-    CLICKUP_WEBHOOK_SECRET: ${self:custom.udexp.clickup.webhookSecret, ''}
     STALE_PR_START: ${self:custom.udexp.stalePR.start, ''}
     STALE_PR_HISTORY: ${self:custom.udexp.stalePR.history, ''}
     STALE_PR_SCHEDULE: ${self:custom.udexp.stalePR.schedule, ''}
@@ -49,7 +46,7 @@ functions:
       - Effect: "Allow"
         Action:
           - "secretsmanager:GetSecretValue"
-        Resource: "${self:provider.environment.GITHUB_WEBHOOK_SECRET}"
+        Resource: "${self:provider.environment.UDEXP_SECRET}"
       - Effect: Allow
         Action:
           - lambda:InvokeFunction
@@ -69,11 +66,7 @@ functions:
       - Effect: "Allow"
         Action:
           - "secretsmanager:GetSecretValue"
-        Resource: "${self:provider.environment.SLACK_SIGNING_SECRET}"
-      - Effect: "Allow"
-        Action:
-          - "secretsmanager:GetSecretValue"
-        Resource: "${self:provider.environment.SLACK_BOT_TOKEN}"
+        Resource: "${self:provider.environment.UDEXP_SECRET}"
   githubPRHandler:
     handler: handlers/githubPRHandler.githubPRHandler
     timeout: 90
@@ -82,7 +75,7 @@ functions:
       - Effect: "Allow"
         Action:
           - "secretsmanager:GetSecretValue"
-        Resource: "${self:provider.environment.GITHUB_TOKEN_SECRET}"
+        Resource: "${self:provider.environment.UDEXP_SECRET}"
   githubReviewHandler:
     handler: handlers/githubReviewHandler.githubReviewHandler
     timeout: 90
@@ -91,11 +84,7 @@ functions:
       - Effect: "Allow"
         Action:
           - "secretsmanager:GetSecretValue"
-        Resource: "${self:provider.environment.SLACK_SIGNING_SECRET}"
-      - Effect: "Allow"
-        Action:
-          - "secretsmanager:GetSecretValue"
-        Resource: "${self:provider.environment.SLACK_BOT_TOKEN}"
+        Resource: "${self:provider.environment.UDEXP_SECRET}"
   slackInteractionListener:
     handler: handlers/slackInteractionListener.slackInteractionListener
     timeout: 90
@@ -106,11 +95,7 @@ functions:
       - Effect: "Allow"
         Action:
           - "secretsmanager:GetSecretValue"
-        Resource: "${self:provider.environment.SLACK_SIGNING_SECRET}"
-      - Effect: "Allow"
-        Action:
-          - "secretsmanager:GetSecretValue"
-        Resource: "${self:provider.environment.SLACK_BOT_TOKEN}"
+        Resource: "${self:provider.environment.UDEXP_SECRET}"
   githubMergeBot:
     handler: handlers/githubMergeBot.githubMergeBot
     maximumRetryAttempts: 0
@@ -119,7 +104,7 @@ functions:
       - Effect: "Allow"
         Action:
           - "secretsmanager:GetSecretValue"
-        Resource: "${self:provider.environment.GITHUB_TOKEN_SECRET}"
+        Resource: "${self:provider.environment.UDEXP_SECRET}"
     environment:
       DEBUG: "*"
   clickupWebhookListener:
@@ -130,7 +115,7 @@ functions:
       - Effect: "Allow"
         Action:
           - "secretsmanager:GetSecretValue"
-        Resource: "${self:provider.environment.CLICKUP_WEBHOOK_SECRET}"
+        Resource: "${self:provider.environment.UDEXP_SECRET}"
       - Effect: Allow
         Action:
           - lambda:InvokeFunction
@@ -146,7 +131,7 @@ functions:
       - Effect: "Allow"
         Action:
           - "secretsmanager:GetSecretValue"
-        Resource: "${self:provider.environment.CLICKUP_API_KEY}"
+        Resource: "${self:provider.environment.UDEXP_SECRET}"
       - Effect: Allow
         Action:
           - lambda:InvokeFunction
@@ -166,7 +151,7 @@ functions:
       - Effect: "Allow"
         Action:
           - "secretsmanager:GetSecretValue"
-        Resource: "${self:provider.environment.GITHUB_TOKEN_SECRET}"
+        Resource: "${self:provider.environment.UDEXP_SECRET}"
       - Effect: "Allow"
         Action:
           - "secretsmanager:GetSecretValue"
@@ -187,7 +172,7 @@ functions:
       - Effect: "Allow"
         Action:
           - "secretsmanager:GetSecretValue"
-        Resource: "${self:provider.environment.GITHUB_TOKEN_SECRET}"
+        Resource: "${self:provider.environment.UDEXP_SECRET}"
   stalePRHandler:
     handler: handlers/stalePRHandler.stalePRHandler
     timeout: 120
@@ -197,11 +182,7 @@ functions:
       - Effect: "Allow"
         Action:
           - "secretsmanager:GetSecretValue"
-        Resource: "${self:provider.environment.SLACK_SIGNING_SECRET}"
-      - Effect: "Allow"
-        Action:
-          - "secretsmanager:GetSecretValue"
-        Resource: "${self:provider.environment.SLACK_BOT_TOKEN}"
+        Resource: "${self:provider.environment.UDEXP_SECRET}"
       - Effect: "Allow"
         Action:
           - "secretsmanager:GetSecretValue"

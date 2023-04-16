@@ -2,8 +2,7 @@ import { SlackBot } from "../lib/slack"
 import { DB } from "../lib/storage"
 
 const slackBot = new SlackBot({
-  signingSecret: process.env.SLACK_SIGNING_SECRET,
-  token: process.env.SLACK_BOT_TOKEN,
+  secret: process.env.UDEXP_SECRET,
 })
 
 const dbConn = new DB({

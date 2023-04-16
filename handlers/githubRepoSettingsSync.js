@@ -1,15 +1,22 @@
 import { getOctokit } from '../lib/octokit'
 import { syncLabels } from '../lib/labels'
 import { log } from '../lib/logging'
+import { getJSONSecret } from '../lib/secret'
 
 const REPO_SETTINGS = JSON.parse(
   Buffer.from(process.env.REPO_SYNC_SETTINGS, 'base64').toString('utf8')
 )
+const udexpSecret = process.env.UDEXP_SECRET
 
 export async function githubRepoSettingsSync (event) {
   log(event)
   try {
-    const octokit = await getOctokit()
+    if (Object.entries(REPO_SETTINGS).length === 0) {
+      console.log("RepoSync is disabled")
+      return
+    }
+    const githubToken = await getToken(udexpSecret)
+    const octokit = getOctokit(githubToken)
     if (event.updateAllRepos) {
       const repoList = await octokit.rest.repos.listForOrg({
         org: event.updateAllRepos.org,
@@ -36,7 +43,8 @@ export async function githubRepoSettingsSync (event) {
 
 async function updateRepoSettings(octokit, { owner, repo, org }) {
   if (REPO_SETTINGS.labels) {
-    await syncLabels(`${owner}/${repo}`, REPO_SETTINGS.labels)
+    const githubToken = await getToken(udexpSecret)
+    await syncLabels(`${owner}/${repo}`, REPO_SETTINGS.labels, githubToken)
     console.log(`${repo}: labels updated`)
   }
   if (REPO_SETTINGS.settings) {
@@ -59,4 +67,9 @@ async function updateRepoSettings(octokit, { owner, repo, org }) {
       console.log(`${repo}: permission added for ${team}: ${REPO_SETTINGS.permissions[team]}`)
     }))
   }
+}
+
+async function getToken(udexpSecret) {
+  const secrets = await getJSONSecret(udexpSecret)
+  return secrets?.github?.token
 }

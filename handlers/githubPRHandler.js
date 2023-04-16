@@ -1,11 +1,15 @@
 import { getOctokit, getOctokitGraphql } from '../lib/octokit'
 import { hasReadyForReviewLabel, Labeler } from '../lib/labeler'
 import { log } from '../lib/logging'
+import { getJSONSecret } from '../lib/secret'
+
+const udexpSecret = process.env.UDEXP_SECRET
 
 export async function githubPRHandler (event, context) {
   log(event)
-  const octokit = await getOctokit()
-  const graphql = await getOctokitGraphql()
+  const githubToken = (await getJSONSecret(udexpSecret)).github.token
+  const octokit = getOctokit(githubToken)
+  const graphql = getOctokitGraphql(githubToken)
   const data = event.body
   const labeler = new Labeler(octokit, {
     owner: data.repository.owner.login,

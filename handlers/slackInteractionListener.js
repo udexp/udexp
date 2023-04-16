@@ -2,8 +2,7 @@ import { SlackBot } from '../lib/slack'
 import { log } from '../lib/logging'
 
 const slackBot = new SlackBot({
-  signingSecret: process.env.SLACK_SIGNING_SECRET,
-  token: process.env.SLACK_BOT_TOKEN,
+  secret: process.env.UDEXP_SECRET,
 })
 
 slackBot.onAction('review/start', async (event) => {

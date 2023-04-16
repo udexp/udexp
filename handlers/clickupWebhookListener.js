@@ -1,9 +1,9 @@
+import crypto from 'crypto'
 import { invoke } from '../lib/invoke'
-import { getSecret } from '../lib/secret'
-import { clickupSaveTaskHandler } from './clickupSaveTaskHandler'
 import { log } from '../lib/logging'
+import { getJSONSecret } from '../lib/secret'
 
-const crypto = require('crypto')
+const udexpSecret = process.env.UDEXP_SECRET
 
 const DEFAULT = '_'
 
@@ -12,7 +12,7 @@ export async function clickupWebhookListener (event, context) {
   let errMsg // eslint-disable-line
   const headers = event.headers
   const sig = headers['x-signature'] || headers['X-Signature']
-  const secret = await getSecret(process.env.CLICKUP_WEBHOOK_SECRET)
+  const secret = (await getJSONSecret(udexpSecret)).clickup.webhookSecret
   const calculatedSig = signRequestBody(secret, event.body)
 
   if (!sig) {
@@ -46,7 +46,7 @@ export async function clickupWebhookListener (event, context) {
       body: item,
     }
 
-    await invoke(clickupSaveTaskHandler, data)
+    await invoke('clickupSaveTaskHandler', data)
   })
   const results = await Promise.allSettled(actions)
   console.log(results)

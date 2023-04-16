@@ -1,16 +1,10 @@
 import crypto from 'crypto'
 
-import { getSecret } from '../lib/secret'
+import { getJSONSecret } from '../lib/secret'
 import { Invoker } from '../lib/invoke'
 import { DB } from '../lib/storage'
 import { SqsExecute } from '../lib/sqs'
 import { log } from '../lib/logging'
-import { githubMergeBot } from './githubMergeBot'
-import { githubLinkClickup } from './githubLinkClickup'
-import { githubLabelHandler } from './githubLabelHandler'
-import { githubRepoSettingsSync } from './githubRepoSettingsSync'
-import { githubPRHandler } from './githubPRHandler'
-import { githubReviewHandler } from './githubReviewHandler'
 
 const DEFAULT = '_'
 
@@ -19,12 +13,15 @@ const dbConn = new DB({
   resourceArn: process.env.DATA_API_RESOURCE_ARN,
   secretArn: process.env.DATA_API_SECRET_ARN,
 })
+const udexpSecret = process.env.UDEXP_SECRET
+const reviewFlow = process.env.GITHUB_REVIEW_FLOW
+const clickupEnabled = process.env.CLICKUP_ENABLED === 'true'
 
 export async function githubWebhookListener (event, context) {
   log(event)
   return SqsExecute(event, async (event) => {
     let errMsg // eslint-disable-line
-    const token = await getSecret(process.env.GITHUB_WEBHOOK_SECRET)
+    const token = (await getJSONSecret(udexpSecret)).github.webhookSecret
     const headers = event.headers
     const sig = headers['x-hub-signature']
     const githubEvent = headers['x-github-event']
@@ -32,7 +29,7 @@ export async function githubWebhookListener (event, context) {
     const calculatedSig = signRequestBody(token, event.body)
 
     if (typeof token !== 'string') {
-      errMsg = 'Must provide a \'GITHUB_WEBHOOK_SECRET\' env variable'
+      errMsg = 'Cannot find github.webhookSecret'
       return {
         statusCode: 401,
         headers: { 'Content-Type': 'text/plain' },
@@ -92,34 +89,40 @@ export async function githubWebhookListener (event, context) {
     switch (data.type) {
       case 'pull_request':
         const pull_request = data.body.pull_request
-        invoker.start(githubPRHandler, data)
+        if (reviewFlow === 'draft') {
+          invoker.start('githubPRHandler', data)
+        }
         if (pull_request.merged && ['labeled', 'closed'].includes(data.action)) {
-          invoker.start(githubMergeBot, data)
-          invoker.start(githubLinkClickup, data)
+          invoker.start('githubMergeBot', data)
+          if (clickupEnabled) {
+            invoker.start('githubLinkClickup', data)
+          }
         }
         switch (data.action) {
           case 'labeled':
           case 'unlabeled':
-            invoker.start(githubLabelHandler, data)
+            invoker.start('githubLabelHandler', data)
             break
           case 'opened':
             if (Array.isArray(pull_request.labels) && pull_request.labels.length > 0) {
-              invoker.start(githubLabelHandler, data)
+              invoker.start('githubLabelHandler', data)
             }
             break
         }
         break
       case 'pull_request_review':
-        invoker.start(githubPRHandler, data)
-        invoker.start(githubReviewHandler, data)
+        invoker.start('githubPRHandler', data)
+        invoker.start('githubReviewHandler', data)
         break
       case 'push':
-        invoker.start(githubLinkClickup, data)
+        if (clickupEnabled) {
+          invoker.start('githubLinkClickup', data)
+        }
         break
       case 'repository':
         switch (data.action) {
           case 'created':
-            invoker.start(githubRepoSettingsSync, data)
+            invoker.start('githubRepoSettingsSync', data)
             break
         }
         break

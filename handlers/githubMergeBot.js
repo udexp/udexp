@@ -2,13 +2,16 @@ import { backportPullRequest } from '../lib/backport'
 import { getOctokit } from '../lib/octokit'
 import { Labeler } from '../lib/labeler'
 import { log } from '../lib/logging'
+import { getJSONSecret } from '../lib/secret'
 
 const backportLabelRe = /backport\s+to.*\s+(\S+)$/i
+const udexpSecret = process.env.UDEXP_SECRET
 
 export async function githubMergeBot (event, context) {
   log(event)
   try {
-    const octokit = await getOctokit()
+    const githubToken = (await getJSONSecret(udexpSecret)).github.token
+    const octokit = getOctokit(githubToken)
     const data = event.body
     const pull_request = data.pull_request
     const owner = data.repository.owner.login

@@ -1,12 +1,14 @@
 import { getOctokit } from '../lib/octokit'
 import { DB } from '../lib/storage'
 import { log } from '../lib/logging'
+import { getJSONSecret } from '../lib/secret'
 
 const dbConn = new DB({
   database: process.env.DATA_API_DATABASE_NAME,
   resourceArn: process.env.DATA_API_RESOURCE_ARN,
   secretArn: process.env.DATA_API_SECRET_ARN,
 })
+const udexpSecret = process.env.UDEXP_SECRET
 
 // check no more than MAX_REGEX tasks each time
 // helps do divide and conquer
@@ -40,7 +42,8 @@ export async function githubLinkClickup (event, context) {
         const owner = data.repository.owner.login
         const repo = data.repository.name
         const pull_number = data.pull_request.number
-        const octokit = await getOctokit()
+        const githubToken = await getToken(udexpSecret)
+        const octokit = getOctokit(githubToken)
         const { data: prCommits } = await octokit.rest.pulls.listCommits({
           owner,
           repo,
@@ -70,4 +73,9 @@ export async function githubLinkClickup (event, context) {
     console.log(e)
     throw e
   }
+}
+
+async function getToken(udexpSecret) {
+  const secrets = await getJSONSecret(udexpSecret)
+  return secrets?.github?.token
 }
