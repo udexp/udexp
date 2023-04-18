@@ -11,7 +11,7 @@ plugins:
 provider:
   name: aws
   runtime: nodejs16.x
-  region: us-east-2
+  region: ${self:custom.udexp.region}
   environment:
     NAME_PREFIX: ${self:service}-${sls:stage}-
     UDEXP_SECRET: ${self:custom.udexp.secret}
@@ -225,9 +225,8 @@ custom:
       secretArn: ${self:provider.environment.DATA_API_SECRET_ARN}
       resourceArn: ${self:provider.environment.DATA_API_RESOURCE_ARN}
       database: ${self:provider.environment.DATA_API_DATABASE_NAME}
-  udexp: ${file(udexp.yaml)}
+  udexp: ${file(./config/udexp-config.js)}
 
 resources:
   - ${file(./resources/api.yaml)}
   - ${file(./resources/db.yaml)}
-

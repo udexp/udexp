@@ -1,5 +1,5 @@
-import { SlackBot } from "../lib/slack"
-import { DB } from "../lib/storage"
+import { SlackBot } from '../lib/slack'
+import { DB } from '../lib/storage'
 
 const slackBot = new SlackBot({
   secret: process.env.UDEXP_SECRET,
@@ -68,54 +68,54 @@ export async function stalePRHandler () {
     if (rows.length > 0) {
       const blocks = [
         {
-          type: "section",
+          type: 'section',
           text: {
-            type: "mrkdwn",
-            text: "Stale un-merged PRs:"
+            type: 'mrkdwn',
+            text: 'Stale un-merged PRs:'
           }
         },
       ]
       rows.forEach(row => {
         blocks.push(
           {
-            type: "divider"
+            type: 'divider'
           },
           {
-            type: "context",
+            type: 'context',
             elements: [
               {
-                type: "mrkdwn",
-                text: ":pr-green:"
+                type: 'mrkdwn',
+                text: ':pr-green:'
               },
               {
-                type: "mrkdwn",
+                type: 'mrkdwn',
                 text: row.repo
               }
             ]
           },
           {
-            type: "section",
+            type: 'section',
             text: {
-              type: "mrkdwn",
+              type: 'mrkdwn',
               text: `*${row.title}*`
             }
           },
           {
-            type: "section",
+            type: 'section',
             text: {
-              type: "mrkdwn",
+              type: 'mrkdwn',
               text: `<${row.url}>`
             }
           },
         )
       })
       const message = {
-        text: `Stale PRs found: ${rows.map(row => row.url).join(" ")}`,
+        text: `Stale PRs found: ${rows.map(row => row.url).join(' ')}`,
         blocks,
       }
       await slackBot.sendMessage(reviewChannel, message)
     } else {
-      console.log("No stale PRs found")
+      console.log('No stale PRs found')
     }
   } catch (e) {
     console.log(e)

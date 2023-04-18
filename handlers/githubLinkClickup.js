@@ -20,7 +20,7 @@ function getChunk (tasks, chunk_idx) {
 
 function matchTasks (dataString, tasks) {
   for (let i = 0, check; (check = getChunk(tasks, i)).length > 0; i++) {
-    const pattern = new RegExp(check.map(t => t + '(?=[^0-9])').join("|"))
+    const pattern = new RegExp(check.map(t => t + '(?=[^0-9])').join('|'))
     const match = pattern.exec(dataString)
     if (match) {
       return match[0]

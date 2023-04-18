@@ -25,7 +25,7 @@
     "no-unreachable": "off",
     "radix": "off",
     "quote-props": "off",
-    "quotes": "off",
+    "quotes": ["error", "single"],
     "space-before-function-paren": "off",
     "space-in-parens": "off",
     "space-infix-ops": "off",

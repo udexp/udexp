@@ -12,7 +12,7 @@ export async function githubRepoSettingsSync (event) {
   log(event)
   try {
     if (Object.entries(REPO_SETTINGS).length === 0) {
-      console.log("RepoSync is disabled")
+      console.log('RepoSync is disabled')
       return
     }
     const githubToken = await getToken(udexpSecret)

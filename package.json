@@ -37,6 +37,7 @@
     "js-yaml": "^3.14.1",
     "json-templates": "^4.1.0",
     "node-fetch": "^3.0.0",
+    "prompts": "^2.4.2",
     "uuid": "^8.3.2"
   },
   "resolutions": {

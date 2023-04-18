@@ -1,0 +1,25 @@
+---
+region: us-east-1
+database: udexp
+github:
+  reviewFlow: draft
+slack:
+  reviewChannel: github-review
+clickup:
+  enabled: false
+stalePR:
+  enabled: false
+  start: 3 days
+  history: 6 months
+repoSync:
+  labels:
+    - name: "0 - ready for review"
+      color: "3ec098"
+      aliases:
+        - ready for review
+      description: The PR is ready for review
+    - name: "1 - WIP"
+      color: "bfdadc"
+      aliases:
+        - WIP
+      description: Work in progress (do not merge)
