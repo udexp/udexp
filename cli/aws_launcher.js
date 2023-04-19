@@ -1,6 +1,5 @@
 const { spawn } = require('child_process')
 const { getSignalByName } = require('./signals')
-const {response} = require('serverless/lib/plugins/aws/custom-resources/resources/utils')
 
 function launch(func) {
   if (process.env.AWS_SDK_LOAD_CONFIG !== '1') {

@@ -181,3 +181,13 @@ Resources:
                   - 'sqs:GetQueueUrl'
                   - 'sqs:SendMessageBatch'
                 Resource: !GetAtt ClickupIntegrationQueue.Arn
+Outputs:
+  GithubWebhookURL:
+    Description: "GitHub webhook"
+    Value: !Sub "https://${UdexpIntegrationApi}.execute-api.${AWS::Region}.amazonaws.com/${self:custom.udexp.github.route}"
+  SlackWebhookURL:
+    Description: "Slack webhook"
+    Value: !Sub "https://${UdexpIntegrationApi}.execute-api.${AWS::Region}.amazonaws.com/${self:custom.udexp.slack.route}"
+  ClickupWebhookURL:
+    Description: "ClickUp webhook"
+    Value: !Sub "https://${UdexpIntegrationApi}.execute-api.${AWS::Region}.amazonaws.com/${self:custom.udexp.clickup.route}"

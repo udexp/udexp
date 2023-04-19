@@ -1,6 +1,6 @@
 const uuid = require('uuid')
 const { SecretsManagerClient, ResourceNotFoundException, CreateSecretCommand } = require('@aws-sdk/client-secrets-manager')
-const { getUdexpSecret, loadConfig, loadDefaultConfig, saveConfig, getDefaultSchedule } = require('../cli/utils')
+const { getUdexpSecret, loadConfig, loadDefaultConfig, saveConfig, getDefaultSchedule, saveUdexpSecret} = require('../cli/utils')
 
 const secretId = 'udexp-config-secrets'
 const defaultSecrets = {
@@ -51,12 +51,7 @@ module.exports = async ({ resolveVariable }) => {
       secretArn = response.ARN
     } catch (e) {
       if (e instanceof ResourceNotFoundException) {
-        const client = new SecretsManagerClient({ region: config.region })
-        const command = new CreateSecretCommand({
-          Name: secretId,
-          SecretString: JSON.stringify(defaultSecrets),
-        })
-        const response = await client.send(command)
+        const response = await saveUdexpSecret(config.region, defaultSecrets)
         secretArn = response.ARN
       } else {
         throw e

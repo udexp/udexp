@@ -1,4 +1,4 @@
-const { SecretsManagerClient, GetSecretValueCommand } = require('@aws-sdk/client-secrets-manager')
+const { SecretsManagerClient, GetSecretValueCommand, CreateSecretCommand} = require('@aws-sdk/client-secrets-manager')
 const { resolve } = require('node:path')
 const { access, constants, readFile, writeFile } = require('node:fs/promises')
 const { safeLoad, safeDump } = require('js-yaml')
@@ -9,6 +9,15 @@ const cron = 'cron(MINUTES 12 ? * MON-FRI *)'
 async function getUdexpSecret(region) {
   const client = new SecretsManagerClient({ region })
   const command = new GetSecretValueCommand({ SecretId: secretId })
+  return client.send(command)
+}
+
+async function saveUdexpSecret(region, data) {
+  const client = new SecretsManagerClient({ region })
+  const command = new CreateSecretCommand({
+    Name: secretId,
+    SecretString: JSON.stringify(data),
+  })
   return client.send(command)
 }
 
@@ -340,10 +349,6 @@ function getDefaultSchedule() {
   return cron.replace('MINUTES', Math.floor(Math.random() * 60).toString())
 }
 
-async function setupSecrets() {
-  console.log('setup secrets')
-}
-
 module.exports = {
   getUdexpSecret,
   getAWSRegionList,
@@ -351,5 +356,5 @@ module.exports = {
   loadDefaultConfig,
   saveConfig,
   getDefaultSchedule,
-  setupSecrets,
+  saveUdexpSecret,
 }
