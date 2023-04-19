@@ -1,6 +1,6 @@
 const uuid = require('uuid')
 const { ResourceNotFoundException } = require('@aws-sdk/client-secrets-manager')
-const { getUdexpSecret, loadConfig, loadDefaultConfig, saveConfig, getDefaultSchedule, saveUdexpSecret} = require('../cli/utils')
+const { getUdexpSecret, loadConfig, loadDefaultConfig, saveConfig, getDefaultSchedule, saveUdexpSecret } = require('../cli/utils')
 
 const defaultSecrets = {
   github: {

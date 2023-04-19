@@ -1,10 +1,10 @@
 const prompts = require('prompts')
-const {safeDump} = require('js-yaml')
+const { safeDump } = require('js-yaml')
 
 const { launch, runSls } = require('./aws_launcher')
 const {
   getAWSRegionList, loadConfig, loadDefaultConfig, getDefaultSchedule, saveConfig, getUdexpSecret,
-  saveUdexpSecret
+  updateUdexpSecret, setupClickupWebhook
 } = require('./utils')
 
 async function main() {
@@ -27,7 +27,7 @@ async function main() {
       name: 'region',
       message: 'What is the desired AWS region?',
       initial: initialRegion,
-      choices: regions.map(r => ({title: r, value: r})),
+      choices: regions.map(r => ({ title: r, value: r })),
     },
     {
       type: 'text',
@@ -40,8 +40,8 @@ async function main() {
     response.secret = config.secret
   }
   const reviewFlows = [
-    {title: 'Draft', value: 'draft', description: 'Use the new "Create Draft/Ready for Review" feature'},
-    {title: 'Label', value: 'label', description: 'Use the "WIP"/"ready for review" labels'},
+    { title: 'Draft', value: 'draft', description: 'Use the new "Create Draft/Ready for Review" feature' },
+    { title: 'Label', value: 'label', description: 'Use the "WIP"/"ready for review" labels' },
   ]
   console.log('\nGitHub\n------')
   response.github = await prompts([
@@ -162,6 +162,7 @@ async function main() {
     }
   } else {
     response.hooks = findHookURLs(out)
+    await setupSlackManifest(response)
     await setupSecrets(response)
   }
 }
@@ -176,6 +177,17 @@ function findHookURLs(data) {
     })
   }
   return urls
+}
+
+async function setupSlackManifest(config) {
+  if (config?.hooks?.Slack) {
+    const manifest = await loadConfig('./slack-manifest.yaml')
+    if (!manifest) {
+      const defaults = await loadConfig('./config/slack-app-manifest.yaml')
+      defaults.settings.interactivity.request_url = config.hooks.Slack
+      await saveConfig(defaults, './slack-manifest.yaml')
+    }
+  }
 }
 
 async function setupSecrets(config) {
@@ -209,7 +221,7 @@ async function setupSecrets(config) {
         message: 'GtiHub webhook secret?',
         initial: secret.github.webhookSecret,
       },
-    ], {onCancel})
+    ], { onCancel })
     if (cancelled) {
       return
     }
@@ -226,27 +238,47 @@ async function setupSecrets(config) {
         message: 'Slack interaction signing secret?',
         initial: secret.slack.signingSecret,
       },
-    ], {onCancel})
+    ], { onCancel })
     if (cancelled) {
       return
     }
-    secret.clickup = await prompts([
-      {
-        type: 'text',
-        name: 'apiKey',
-        message: 'ClickUp™ API key?',
-        initial: secret.clickup.apiKey,
-      },
-      {
-        type: 'text',
-        name: 'webhookSecret',
-        message: 'ClickUp™ webhook secret?',
-        initial: secret.clickup.webhookSecret,
-      },
-    ], {onCancel})
-    if (cancelled) {
-      return
+    if (config.clickup.enabled) {
+      secret.clickup = await prompts([
+        {
+          type: 'text',
+          name: 'apiKey',
+          message: 'ClickUp™ API key?',
+          initial: secret.clickup.apiKey,
+        },
+        {
+          type: 'confirm',
+          name: 'auto',
+          message: 'Setup ClickUp™ webhook automatically?',
+          initial: true,
+        },
+        {
+          type: prev => prev ? null: 'text',
+          name: 'webhookSecret',
+          message: 'ClickUp™ webhook secret?',
+          initial: secret.clickup.webhookSecret,
+        },
+      ], { onCancel })
+      if (cancelled) {
+        return
+      }
+      if (secret.clickup.auto) {
+        const orgId = config?.clickup?.orgId
+        if (!orgId) {
+          throw new Error('Could not find ClickUp™ organization id in config')
+        }
+        if (!config?.hooks?.Clickup) {
+          throw new Error('Could not find ClickUp™ webhook deployment')
+        }
+        const hook = await setupClickupWebhook(orgId, secret.clickup.apiKey, config.hooks.Clickup)
+        secret.clickup.webhookSecret = hook.secret
+      }
     }
+    delete secret.clickup.auto
     console.log('\nSecret contents\n---------------')
     console.log(safeDump(secret, {}))
     const write = await prompts([
@@ -258,7 +290,7 @@ async function setupSecrets(config) {
       },
     ])
     if (write.enabled) {
-      await saveUdexpSecret(config.region, secret)
+      await updateUdexpSecret(config.region, secret)
     }
   }
 }

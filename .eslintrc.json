@@ -23,6 +23,7 @@
     "no-multi-spaces": "off",
     "no-throw-literal": "off",
     "no-unreachable": "off",
+    "object-curly-spacing": ["error", "always"],
     "radix": "off",
     "quote-props": "off",
     "quotes": ["error", "single"],

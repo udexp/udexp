@@ -1,5 +1,5 @@
-import {MigrationFn} from 'data-api-migrations'
-import {MigrationTransaction} from '../migration-utils'
+import { MigrationFn } from 'data-api-migrations'
+import { MigrationTransaction } from '../migration-utils'
 
 export const up: MigrationFn = async (dataAPI) => {
   const t = await MigrationTransaction.create(dataAPI)
@@ -12,7 +12,7 @@ export const up: MigrationFn = async (dataAPI) => {
                        UNIQUE (commit, custom_id)
                    )`)
     await t.query('CREATE INDEX commit_map_idx ON commit_map (commit)')
-    const {records: data1} = await t.query(`
+    const { records: data1 } = await t.query(`
         SELECT '(' || string_agg(custom_id || '(?=[^0-9])', '|') || ')'
         FROM task_list`)
     const pattern = data1[0][0].stringValue

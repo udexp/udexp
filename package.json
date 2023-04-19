@@ -36,7 +36,7 @@
     "github-label-sync": "^2.2.0",
     "js-yaml": "^3.14.1",
     "json-templates": "^4.1.0",
-    "node-fetch": "^3.0.0",
+    "node-fetch": "^3.3.1",
     "prompts": "^2.4.2",
     "uuid": "^8.3.2"
   },

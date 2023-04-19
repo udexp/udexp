@@ -1,0 +1,25 @@
+display_information:
+  name: UdexpBot
+features:
+  bot_user:
+    display_name: UdexpBot
+    always_online: false
+oauth_config:
+  scopes:
+    bot:
+      - channels:read
+      - chat:write
+      - incoming-webhook
+      - users.profile:read
+      - users:read
+      - im:write
+      - mpim:write
+      - groups:write
+      - channels:manage
+settings:
+  interactivity:
+    is_enabled: true
+    request_url: SLACK_WEBHOOK_URL
+  org_deploy_enabled: false
+  socket_mode_enabled: false
+  token_rotation_enabled: false

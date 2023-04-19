@@ -1,4 +1,4 @@
-const { SecretsManagerClient, GetSecretValueCommand, CreateSecretCommand} = require('@aws-sdk/client-secrets-manager')
+const { SecretsManagerClient, GetSecretValueCommand, CreateSecretCommand, PutSecretValueCommand } = require('@aws-sdk/client-secrets-manager')
 const { resolve } = require('node:path')
 const { access, constants, readFile, writeFile } = require('node:fs/promises')
 const { safeLoad, safeDump } = require('js-yaml')
@@ -12,10 +12,19 @@ async function getUdexpSecret(region) {
   return client.send(command)
 }
 
-async function saveUdexpSecret(region, data) {
+async function createUdexpSecret(region, data) {
   const client = new SecretsManagerClient({ region })
   const command = new CreateSecretCommand({
     Name: secretId,
+    SecretString: JSON.stringify(data),
+  })
+  return client.send(command)
+}
+
+async function updateUdexpSecret(region, data) {
+  const client = new SecretsManagerClient({ region })
+  const command = new PutSecretValueCommand({
+    SecretId: secretId,
     SecretString: JSON.stringify(data),
   })
   return client.send(command)
@@ -349,6 +358,66 @@ function getDefaultSchedule() {
   return cron.replace('MINUTES', Math.floor(Math.random() * 60).toString())
 }
 
+async function createClickupWebhook(orgId, apiKey, url) {
+  const resp = await fetch(
+    `https://api.clickup.com/api/v2/team/${orgId}/webhook`,
+    {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: apiKey
+      },
+      body: JSON.stringify({
+        endpoint: url,
+        events: [
+          'taskCreated',
+          'taskUpdated',
+          'taskDeleted',
+          'taskPriorityUpdated',
+          'taskStatusUpdated',
+          'taskAssigneeUpdated',
+          'taskDueDateUpdated',
+          'taskTagUpdated',
+          'taskMoved',
+          'taskCommentPosted',
+          'taskCommentUpdated',
+          'taskTimeEstimateUpdated',
+          'taskTimeTrackedUpdated',
+        ],
+      })
+    }
+  )
+  const data = await resp.json()
+  return data.webhook
+}
+
+async function fetch (url, init) {
+  const { default: nodeFetch } = await import('node-fetch')
+  return await nodeFetch(url, init)
+}
+
+async function setupClickupWebhook(orgId, apiKey, url) {
+  const resp = await fetch(
+    `https://api.clickup.com/api/v2/team/${orgId}/webhook`,
+    {
+      method: 'GET',
+      headers: {
+        Authorization: apiKey
+      }
+    }
+  )
+  if (!resp.ok) {
+    const message = await resp.text()
+    throw new Error(`Clickup API error: ${message}`)
+  }
+  const { webhooks } = await resp.json()
+  let hook = webhooks.find(hook => hook.endpoint === url)
+  if (!hook) {
+    hook = await createClickupWebhook(orgId, apiKey, url)
+  }
+  return hook
+}
+
 module.exports = {
   getUdexpSecret,
   getAWSRegionList,
@@ -356,5 +425,7 @@ module.exports = {
   loadDefaultConfig,
   saveConfig,
   getDefaultSchedule,
-  saveUdexpSecret,
+  createUdexpSecret,
+  updateUdexpSecret,
+  setupClickupWebhook,
 }

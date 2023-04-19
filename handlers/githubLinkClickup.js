@@ -50,8 +50,8 @@ export async function githubLinkClickup (event, context) {
           pull_number,
         })
         commits = prCommits.map(item => ([
-          { name: 'commit', value: { stringValue: item.sha }},
-          { name: 'custom_id', value: { stringValue: taskId }},
+          { name: 'commit', value: { stringValue: item.sha } },
+          { name: 'custom_id', value: { stringValue: taskId } },
         ]))
       }
     } else if (Array.isArray(data.commits)) {
@@ -59,8 +59,8 @@ export async function githubLinkClickup (event, context) {
         const taskId = matchTasks(item.message, tasks)
         if (taskId) {
           res.push([
-            { name: 'commit', value: { stringValue: item.id }},
-            { name: 'custom_id', value: { stringValue: taskId }},
+            { name: 'commit', value: { stringValue: item.id } },
+            { name: 'custom_id', value: { stringValue: taskId } },
           ])
         }
         return res

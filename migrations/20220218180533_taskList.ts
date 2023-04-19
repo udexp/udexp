@@ -1,5 +1,5 @@
-import {MigrationFn} from 'data-api-migrations'
-import {MigrationTransaction} from '../migration-utils'
+import { MigrationFn } from 'data-api-migrations'
+import { MigrationTransaction } from '../migration-utils'
 
 export const up: MigrationFn = async (dataAPI) => {
   const t = await MigrationTransaction.create(dataAPI)
