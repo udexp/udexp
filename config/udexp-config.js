@@ -1,8 +1,7 @@
 const uuid = require('uuid')
-const { SecretsManagerClient, ResourceNotFoundException, CreateSecretCommand } = require('@aws-sdk/client-secrets-manager')
+const { ResourceNotFoundException } = require('@aws-sdk/client-secrets-manager')
 const { getUdexpSecret, loadConfig, loadDefaultConfig, saveConfig, getDefaultSchedule, saveUdexpSecret} = require('../cli/utils')
 
-const secretId = 'udexp-config-secrets'
 const defaultSecrets = {
   github: {
     webhookSecret: null,
