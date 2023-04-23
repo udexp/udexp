@@ -1,10 +1,11 @@
 const prompts = require('prompts')
 const { safeDump } = require('js-yaml')
+const uuid = require('uuid')
 
 const { launch, runSls } = require('./aws_launcher')
 const {
   getAWSRegionList, loadConfig, loadDefaultConfig, getDefaultSchedule, saveConfig, getUdexpSecret,
-  updateUdexpSecret, setupClickupWebhook
+  updateUdexpSecret, setupClickupWebhook, getGithubOrg, setupGithubWebhook,
 } = require('./utils')
 
 async function main() {
@@ -20,6 +21,11 @@ async function main() {
   }
   const region = config.region || process.env.AWS_REGION || 'us-east-1'
   const initialRegion = regions.indexOf(region) || regions.indexOf('us-east-1')
+  let cancelled = false
+  const onCancel = prompt => {
+    cancelled = true
+    return false
+  }
   console.log('\nGlobals\n-------')
   const response = await prompts([
     {
@@ -35,7 +41,10 @@ async function main() {
       message: 'Database name?',
       initial: config.database,
     },
-  ])
+  ], { onCancel })
+  if (cancelled) {
+    return
+  }
   if (config.secret) {
     response.secret = config.secret
   }
@@ -52,7 +61,10 @@ async function main() {
       choices: reviewFlows,
       initial: reviewFlows.findIndex(r => r.value === config.github.reviewFlow),
     },
-  ])
+  ], { onCancel })
+  if (cancelled) {
+    return
+  }
   if (config.github.route) {
     response.github.route = config.github.route
   }
@@ -64,7 +76,10 @@ async function main() {
       message: 'Slack channel for GitHub review requests?',
       initial: config.slack.reviewChannel,
     },
-  ])
+  ], { onCancel })
+  if (cancelled) {
+    return
+  }
   if (config.slack.route) {
     response.slack.route = config.slack.route
   }
@@ -91,7 +106,10 @@ async function main() {
         return true
       },
     },
-  ])
+  ], { onCancel })
+  if (cancelled) {
+    return
+  }
   if (config.clickup.route) {
     response.clickup.route = config.clickup.route
   }
@@ -121,7 +139,10 @@ async function main() {
       message: 'Send Slack notification at what schedule?',
       initial: config.stalePR.schedule || getDefaultSchedule(),
     },
-  ])
+  ], { onCancel })
+  if (cancelled) {
+    return
+  }
   console.log('\nRepo Sync\n---------')
   const labelSync = await prompts([
     {
@@ -130,7 +151,10 @@ async function main() {
       message: 'Enable organization-wide label sync?',
       initial: true,
     },
-  ])
+  ], { onCancel })
+  if (cancelled) {
+    return
+  }
   if (labelSync.enabled && config.repoSync) {
     response.repoSync = config.repoSync
   }
@@ -144,7 +168,10 @@ async function main() {
         message: 'Overwrite existing udexp.yaml config?',
         initial: true,
       },
-    ])
+    ], { onCancel })
+    if (cancelled) {
+      return
+    }
     save = write.enabled
   } else {
     save = true
@@ -216,15 +243,61 @@ async function setupSecrets(config) {
         initial: secret.github.token,
       },
       {
-        type: 'text',
+        type: 'confirm',
+        name: 'auto',
+        message: 'Setup GtiHub webhook automatically?',
+        initial: true,
+      },
+      {
+        type: prev => prev ? null : 'text',
         name: 'webhookSecret',
         message: 'GtiHub webhook secret?',
-        initial: secret.github.webhookSecret,
+        initial: secret.github.webhookSecret || uuid.v4(),
       },
     ], { onCancel })
     if (cancelled) {
       return
     }
+    if (secret.github.auto) {
+      if (!secret.github.webhookSecret) {
+        secret.github.webhookSecret = uuid.v4()
+      }
+      if (!config?.hooks?.Github) {
+        throw new Error('Could not find GitHub webhook deployment')
+      }
+      const resp = await prompts([
+        {
+          type: 'text',
+          name: 'adminToken',
+          message: 'GitHub organization `admin:org_hook` token (will not be saved)?',
+        },
+        {
+          type: 'text',
+          name: 'org',
+          message: 'Github organization to set webhook on?',
+          validate: async (value) => {
+            if (!value) {
+              return 'Organization name cannot be empty'
+            }
+            try {
+              const org = await getGithubOrg(value, secret.github.token)
+              if (!org) {
+                return `Organization not found, or no permissions: ${value}`
+              }
+            } catch (e) {
+              return e?.response?.data?.message || `${e}`
+            }
+            return true
+          },
+        },
+      ])
+      const hook = await setupGithubWebhook(resp.org, resp.adminToken, secret.github.webhookSecret, config.hooks.Github)
+      if (!hook) {
+        throw new Error('Github webhook creation failed, no permissions?')
+      }
+      console.log(`Created GitHub hook for: ${hook.config.url}`)
+    }
+    delete secret.github.auto
     secret.slack = await prompts([
       {
         type: 'text',

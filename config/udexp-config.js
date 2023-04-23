@@ -1,6 +1,13 @@
 const uuid = require('uuid')
 const { ResourceNotFoundException } = require('@aws-sdk/client-secrets-manager')
-const { getUdexpSecret, loadConfig, loadDefaultConfig, saveConfig, getDefaultSchedule, saveUdexpSecret } = require('../cli/utils')
+const {
+  getUdexpSecret,
+  loadConfig,
+  loadDefaultConfig,
+  saveConfig,
+  getDefaultSchedule,
+  createUdexpSecret
+} = require('../cli/utils')
 
 const defaultSecrets = {
   github: {
@@ -50,7 +57,7 @@ module.exports = async ({ resolveVariable }) => {
       secretArn = response.ARN
     } catch (e) {
       if (e instanceof ResourceNotFoundException) {
-        const response = await saveUdexpSecret(config.region, defaultSecrets)
+        const response = await createUdexpSecret(config.region, defaultSecrets)
         secretArn = response.ARN
       } else {
         throw e

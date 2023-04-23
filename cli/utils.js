@@ -2,6 +2,7 @@ const { SecretsManagerClient, GetSecretValueCommand, CreateSecretCommand, PutSec
 const { resolve } = require('node:path')
 const { access, constants, readFile, writeFile } = require('node:fs/promises')
 const { safeLoad, safeDump } = require('js-yaml')
+const { Octokit } = require('@octokit/rest')
 
 const secretId = 'udexp-config-secrets'
 const cron = 'cron(MINUTES 12 ? * MON-FRI *)'
@@ -418,6 +419,55 @@ async function setupClickupWebhook(orgId, apiKey, url) {
   return hook
 }
 
+async function setupGithubWebhook(org, token, secret, url) {
+  const octokit = new Octokit({
+    auth: token
+  })
+  const { data } = await octokit.rest.orgs.listWebhooks({
+    org,
+  })
+  let hook = data.find(hook => hook.config.url === url)
+  if (!hook) {
+    try {
+      const { data } = await octokit.rest.orgs.createWebhook({
+        org,
+        name: 'web',
+        active: true,
+        events: ['*'],
+        config: {
+          url,
+          content_type: 'json',
+          secret,
+        },
+      })
+      hook = data
+    } catch (e) {
+      if (e.status >= 404) {
+        return null
+      }
+      throw e
+    }
+  }
+  return hook
+}
+
+async function getGithubOrg(org, token) {
+  const octokit = new Octokit({
+    auth: token
+  })
+  try {
+    const { data } = await octokit.rest.orgs.get({
+      org,
+    })
+    return data
+  } catch (e) {
+    if (e.status === 404) {
+      return null
+    }
+    throw e
+  }
+}
+
 module.exports = {
   getUdexpSecret,
   getAWSRegionList,
@@ -428,4 +478,6 @@ module.exports = {
   createUdexpSecret,
   updateUdexpSecret,
   setupClickupWebhook,
+  setupGithubWebhook,
+  getGithubOrg,
 }
