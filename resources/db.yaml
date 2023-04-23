@@ -27,7 +27,7 @@ Resources:
     Type: AWS::RDS::DBCluster
     Properties:
       BackupRetentionPeriod: 30
-      DatabaseName: ${self:custom.udexp.database, 'udexp'}
+      DatabaseName: udexp
       DBClusterParameterGroupName: !Ref DBClusterParameterGroup
       EnableHttpEndpoint: 'true'
       Engine: aurora-postgresql

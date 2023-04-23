@@ -35,12 +35,6 @@ async function main() {
       initial: initialRegion,
       choices: regions.map(r => ({ title: r, value: r })),
     },
-    {
-      type: 'text',
-      name: 'database',
-      message: 'Database name?',
-      initial: config.database,
-    },
   ], { onCancel })
   if (cancelled) {
     return

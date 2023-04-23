@@ -18,7 +18,7 @@ provider:
     GITHUB_REVIEW_FLOW: ${self:custom.udexp.github.reviewFlow, 'draft'}
     DATA_API_SECRET_ARN: !Ref DBSecretTargetAttachment
     DATA_API_RESOURCE_ARN: !Sub arn:aws:rds:${AWS::Region}:${AWS::AccountId}:cluster:${DBCluster}
-    DATA_API_DATABASE_NAME: ${self:custom.udexp.database, 'udexp'}
+    DATA_API_DATABASE_NAME: 'udexp'
     SLACK_PR_CHANNEL: ${self:custom.udexp.slack.reviewChannel}
     CLICKUP_ENABLED: ${self:custom.udexp.clickup.enabled, 'false'}
     CLICKUP_ORG_ID: ${self:custom.udexp.clickup.orgId, '0'}
